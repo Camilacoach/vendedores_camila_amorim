@@ -1,0 +1,26 @@
+[project]
+name = "camila-amorim-analise-dados"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "camila", email = "camilaramosamorim7@teste.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "ipykernel>=7.3.0",
+    "pandas>=3.0.5",
+    "seaborn>=0.13.2",
+    "statsmodels>=0.15.0",
+]
+
+[project.scripts]
+camila-amorim-analise-dados = "camila_amorim_analise_dados:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = false
+link-mode = "copy"
