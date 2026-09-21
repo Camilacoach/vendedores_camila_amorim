@@ -9,7 +9,6 @@ Orientações:
 - Resolva cada exercício separadamente.
 - Execute o arquivo após cada solução para conferir o resultado.
 - Use apenas os comandos básicos estudados em aula.
-- Não use IA para resolver os exercícios, pois o objetivo é relembrar e praticar os conceitos aprendidos.
 - Duvidas, mande um e-mail para o professor: laerte.takeuti@professores.ibmec.edu.br
 - Se quiser mais exercícios, consulte o site: https://www.w3schools.com/python/default.asp
 - Se quiser aulas em vídeo, consulte o canal: https://www.youtube.com/watch?v=S9uPNppGsGo&list=PLHz_AreHm4dlKP6QQCekuIPky1CiwmdI6
