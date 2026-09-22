@@ -22,6 +22,7 @@ df_contexto = pd.read_csv('vendedores_contexto.csv')
 # .shape devolve (linhas, colunas).
 print("Desempenho:", df_desempenho.shape)   # (120, 7)
 print("Contexto:  ", df_contexto.shape)     # (118, 4)
+_
 # RESPOSTA: desempenho tem 120 linhas e 7 colunas; contexto tem 118 linhas e 4 colunas.
 
 # --- Identifique qual coluna deve ser utilizada como chave.
