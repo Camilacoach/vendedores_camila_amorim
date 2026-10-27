@@ -6,9 +6,11 @@ Análise das notas dos alunos em 3 artigos:
 
 Coloque na mesma pasta: dados_apendice_A_198_observacoes.xlsx e TD_834_tabelas.xlsx
 Instale: pip install pandas openpyxl numpy matplotlib scipy statsmodels
-Rode:    python analise_notas.py   (os gráficos abrem na tela e são salvos em "resultados")
+Rode:    python analise_notas.py   (todos os gráficos saem juntos numa única figura,
+         que abre na tela e é salva em "resultados/todos_os_graficos.png")
 """
 from pathlib import Path
+import textwrap
 import warnings
 
 import matplotlib.pyplot as plt
@@ -27,7 +29,7 @@ SAIDA.mkdir(exist_ok=True)
 # -----------------------------------------------------------------------------
 # 1. BOLSA UNIVERSIDADE: a bolsa aumenta a nota?
 # -----------------------------------------------------------------------------
-def bolsa():
+def bolsa(ax):
     print("\n===== 1. BOLSA UNIVERSIDADE =====")
     df = pd.read_excel(PASTA / "dados_apendice_A_198_observacoes.xlsx", sheet_name="Dados Apêndice A")
     df = df.rename(columns={"Média": "Media", "Renda_Per_Capita": "Renda", "H_estudo": "Horas_estudo"})
@@ -53,17 +55,14 @@ def bolsa():
     vpl = [-custo + sum(passaram * 2000 * 12 * pct / 100 / 1.06 ** t for t in range(1, 43))
            for pct in range(1, 11)]
 
-    fig, ax = plt.subplots(1, 2, figsize=(11, 4.5))
     ax[0].boxplot([df.loc[df.Bolsa == 0, "Media"], df.loc[df.Bolsa == 1, "Media"]])
     ax[0].set_xticks([1, 2], ["Sem bolsa", "Com bolsa"])
     ax[0].axhline(6, color="red", ls="--", label="Nota de aprovação")
-    ax[0].set_title("Notas por condição de bolsa")
+    ax[0].set_title("1. Bolsa: notas por condição de bolsa")
     ax[0].legend()
     ax[1].plot(range(1, 11), vpl, "o-")
     ax[1].axhline(0, color="black")
-    ax[1].set(title="VPL do programa", xlabel="Aumento salarial (%)", ylabel="VPL (R$)")
-    fig.tight_layout()
-    fig.savefig(SAIDA / "1_bolsa.png", dpi=150)
+    ax[1].set(title="1. Bolsa: VPL do programa", xlabel="Aumento salarial (%)", ylabel="VPL (R$)")
 
     dp = df.loc[df.Bolsa == 0, "Media"].std()           # para comparar com o STAR
     return {"efeito": modelo.params["Bolsa"] / dp,
@@ -76,7 +75,7 @@ def bolsa():
 # -----------------------------------------------------------------------------
 # 2. PROJETO STAR: turma pequena aumenta a nota?
 # -----------------------------------------------------------------------------
-def star():
+def star(ax):
     print("\n===== 2. PROJETO STAR =====")
     arq = PASTA / "STAR.csv"
     if not arq.exists():
@@ -122,14 +121,11 @@ def star():
         sub[nome] = (r.params["pequena"], 1.96 * r.bse["pequena"])
         print(f"  {nome}: {r.params['pequena']:.2f} percentis")
 
-    fig, ax = plt.subplots(1, 2, figsize=(11, 4.5))
     ax[0].bar(medias.index, medias.values, color=["#2a7ab9", "#9a9a9a", "#e0913a"])
-    ax[0].set(title="Nota média por tipo de turma", ylabel="Percentil")
+    ax[0].set(title="2. STAR: nota média por tipo de turma", ylabel="Percentil")
     ax[1].errorbar([v[0] for v in sub.values()], list(sub), xerr=[v[1] for v in sub.values()], fmt="o", capsize=5)
     ax[1].axvline(0, color="black", ls="--")
-    ax[1].set(title="Efeito da turma pequena por grupo", xlabel="Percentis (IC 95%)")
-    fig.tight_layout()
-    fig.savefig(SAIDA / "2_star.png", dpi=150)
+    ax[1].set(title="2. STAR: efeito da turma pequena por grupo", xlabel="Percentis (IC 95%)")
 
     dp = d.loc[d.pequena == 0, "nota"].std()
     return {"efeito": modelo.params["pequena"] / dp,
@@ -141,7 +137,7 @@ def star():
 # -----------------------------------------------------------------------------
 # 3. TD 834 (IPEA): o que mais explica os anos de estudo?
 # -----------------------------------------------------------------------------
-def ipea():
+def ipea(ax):
     print("\n===== 3. TD 834 (IPEA) =====")
     arq = PASTA / "TD_834_tabelas.xlsx"
     linhas = []
@@ -167,11 +163,10 @@ def ipea():
     print(resumo.head(10).round(2))
 
     top = resumo.head(10).iloc[::-1]
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.barh(top.index, top.pct_signif, color="#4f9a5a")
-    ax.set(title="IPEA: fatores mais importantes", xlabel="% das regressões com efeito significativo")
-    fig.tight_layout()
-    fig.savefig(SAIDA / "3_ipea.png", dpi=150)
+    nomes_curtos = [textwrap.shorten(n, 32, placeholder="...") for n in top.index]
+    ax[0].barh(nomes_curtos, top.pct_signif, color="#4f9a5a")
+    ax[0].tick_params(axis="y", labelsize=8)
+    ax[0].set(title="3. IPEA: fatores mais importantes", xlabel="% das regressões com efeito significativo")
     return {"z": resumo["z"]}
 
 
@@ -179,12 +174,28 @@ def ipea():
 # 4. JUNTA OS TRÊS ARTIGOS
 # -----------------------------------------------------------------------------
 def juntar():
+    # Uma única figura com todos os gráficos (3 linhas x 3 colunas)
+    fig = plt.figure(figsize=(20, 15))
+    g = fig.add_gridspec(3, 3)
+    eixos = {
+        "Bolsa": [fig.add_subplot(g[0, 0]), fig.add_subplot(g[0, 1])],
+        "STAR": [fig.add_subplot(g[0, 2]), fig.add_subplot(g[1, 0])],
+        "IPEA": [fig.add_subplot(g[1, 1])],
+    }
+    ax = [fig.add_subplot(g[1, 2]), fig.add_subplot(g[2, 0]), fig.add_subplot(g[2, 1:])]
+
     res = {}
     for nome, funcao in [("Bolsa", bolsa), ("STAR", star), ("IPEA", ipea)]:
         try:
-            res[nome] = funcao()
+            res[nome] = funcao(eixos[nome])
         except Exception as erro:
             print(f"[AVISO] {nome} não rodou: {erro}")
+            for a in eixos[nome]:                        # avisa no próprio gráfico
+                a.clear()
+                a.text(0.5, 0.5, f"{nome} não rodou\n(veja o aviso no terminal)",
+                       ha="center", va="center", color="red", transform=a.transAxes)
+                a.set_xticks([])
+                a.set_yticks([])
 
     # O mesmo fator em cada artigo (merenda gratuita = pobre, por isso sinal invertido)
     temas = {
@@ -202,35 +213,34 @@ def juntar():
     print(comp.round(2))
 
     cores = {"Bolsa": "#c0504d", "STAR": "#2a7ab9", "IPEA": "#4f9a5a"}
-    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
 
     # A - qual intervenção aumenta mais a nota (em desvios-padrão)
     nomes = [n for n in ["Bolsa", "STAR"] if n in res]
     ax[0].errorbar([res[n]["efeito"] for n in nomes], nomes, xerr=[res[n]["erro"] for n in nomes],
                    fmt="o", capsize=6, ms=9)
     ax[0].axvline(0, color="black", ls="--")
-    ax[0].set(title="A. Quanto a política aumenta a nota", xlabel="Desvios-padrão (0,2 pequeno | 0,5 médio)")
+    ax[0].set(title="4A. Quanto a política aumenta a nota", xlabel="Desvios-padrão (0,2 pequeno | 0,5 médio)")
 
     # B - notas por grupo
     notas = {k: v for n in nomes for k, v in res[n]["notas"].items()}
     ax[1].bar(range(len(notas)), list(notas.values()),
               color=[cores["Bolsa"] if k.startswith("Bolsa") else cores["STAR"] for k in notas])
     ax[1].set_xticks(range(len(notas)), [k.replace(": ", "\n") for k in notas], fontsize=8)
-    ax[1].set(title="B. Notas por grupo", ylabel="Bolsa: % aprovados | STAR: percentil", ylim=(0, 100))
+    ax[1].set(title="4B. Notas por grupo", ylabel="Bolsa: % aprovados | STAR: percentil", ylim=(0, 100))
 
     # C - mesmo fator nos três artigos
     comp.plot.bar(ax=ax[2], color=[cores[c] for c in comp.columns], rot=0)
     ax[2].axhline(1.96, color="grey", ls=":")
     ax[2].axhline(-1.96, color="grey", ls=":")
     ax[2].axhline(0, color="black")
-    ax[2].set(title="C. O mesmo fator nos três artigos", ylabel="z (fora das linhas = significativo)")
+    ax[2].set(title="4C. O mesmo fator nos três artigos", ylabel="z (fora das linhas = significativo)")
 
-    fig.suptitle("Os três artigos juntos", fontsize=14, weight="bold")
-    fig.tight_layout()
-    fig.savefig(SAIDA / "4_juntos.png", dpi=150)
+    fig.suptitle("Análise das notas: os três artigos", fontsize=16, weight="bold")
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.savefig(SAIDA / "todos_os_graficos.png", dpi=130)
     comp.to_excel(SAIDA / "comparacao_artigos.xlsx")
-    print(f"\nGráficos salvos em: {SAIDA}")
-    plt.show()                                           # abre todos os gráficos na tela
+    print(f"\nGráfico salvo em: {SAIDA / 'todos_os_graficos.png'}")
+    plt.show()                                           # abre a figura com todos os gráficos
     return res
 
 
